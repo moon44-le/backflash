@@ -2,7 +2,16 @@
   "name": "Fahrrad Rücklicht",
   "short_name": "Rücklicht",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#000000",
-  "theme_color": "#000000"
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><circle cx='256' cy='256' r='220' fill='%23FF0000'/><circle cx='256' cy='256' r='160' fill='%23CC0000'/></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
