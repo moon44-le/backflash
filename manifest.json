@@ -1,0 +1,8 @@
+{
+  "name": "Fahrrad Rücklicht",
+  "short_name": "Rücklicht",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000"
+}

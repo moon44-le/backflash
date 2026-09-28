@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Fahrrad Rücklicht</title>
+    <link rel="manifest" href='manifest.json'>
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            background-color: #000000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background-color 0.3s;
+        }
+        body.active {
+            background-color: #FF0000;
+        }
+        
+        .slider-container {
+            position: absolute;
+            width: 80%;
+            max-width: 300px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            backdrop-filter: blur(5px);
+            transition: background-color 0.2s;
+        }
+
+        .slider-container.ready {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .slider-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            pointer-events: none;
+            letter-spacing: 1px;
+        }
+
+        .slider-thumb {
+            border: 5px solid rgba(100, 100, 100, 0.5);
+            width: 64px;
+            height: 64px;
+            background: #ffffff;
+            border-radius: 50%;
+            cursor: pointer;
+            position: absolute;
+            left: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* box-shadow: 0 2px 5px rgba(0,0,0,0.3); */
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36"><path fill="%23666666" d="M8.5 5l10 7-10 7z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        #startSliderContainer {
+            bottom: 40px;
+            display: flex;
+        }
+        #stopSliderContainer {
+            bottom: 40px;
+            display: none;
+        }
+        #stopSliderContainer .slider-text {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        body.active #startSliderContainer {
+            display: none;
+        }
+        body.active #stopSliderContainer {
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="slider-container" id="startSliderContainer">
+        <div class="slider-text">Aktivieren</div>
+        <div class="slider-thumb" id="startThumb"></div>
+    </div>
+
+    <div class="slider-container" id="stopSliderContainer">
+        <div class="slider-text">Deaktivieren</div>
+        <div class="slider-thumb" id="stopThumb"></div>
+    </div>
+
+    <script>
+        let wakeLock = null;
+
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+
+        function initSlider(thumbId, containerId, onSuccess) {
+            const thumb = document.getElementById(thumbId);
+            const container = document.getElementById(containerId);
+            
+            let isDragging = false;
+            let startX = 0;
+
+            thumb.addEventListener('touchstart', (e) => {
+                isDragging = true;
+                thumb.style.transition = 'none';
+                startX = e.touches[0].clientX - thumb.offsetLeft;
+            });
+
+            window.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                let currentX = e.touches[0].clientX - startX;
+                let maxDist = container.clientWidth - thumb.clientWidth - 10;
+                
+                if (currentX < 5) currentX = 5;
+                if (currentX > maxDist) currentX = maxDist;
+                
+                thumb.style.left = currentX + 'px';
+
+                if (currentX >= maxDist * 0.85) {
+                    container.classList.add('ready');
+                } else {
+                    container.classList.remove('ready');
+                }
+            });
+
+            window.addEventListener('touchend', (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+
+                let maxDist = container.clientWidth - thumb.clientWidth - 10;
+                let currentX = thumb.offsetLeft;
+
+                thumb.style.transition = 'left 0.2s ease-out';
+                container.classList.remove('ready');
+
+                if (currentX >= maxDist * 0.85) {
+                    if ("vibrate" in navigator) {
+                        navigator.vibrate(80);
+                    }
+                    resetThumb(thumb);
+                    onSuccess();
+                } else {
+                    resetThumb(thumb);
+                }
+            });
+        }
+
+        function resetThumb(thumb) {
+            thumb.style.left = '5px';
+        }
+
+        initSlider('startThumb', 'startSliderContainer', async () => {
+            document.body.classList.add('active');
+            await requestWakeLock();
+            
+            if ('screen' in window && 'setBrightness' in window.screen) {
+                try { await window.screen.setBrightness(1.0); } catch (e) {}
+            }
+        });
+
+        initSlider('stopThumb', 'stopSliderContainer', async () => {
+            document.body.classList.remove('active');
+            if (wakeLock !== null) {
+                await wakeLock.release();
+                wakeLock = null;
+            }
+        });
+    </script>
+</body>
+</html>
